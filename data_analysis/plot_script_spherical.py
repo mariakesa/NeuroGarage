@@ -25,6 +25,7 @@ whitened_data = pca.fit_transform(standardized_data)
 # In this case, reducing to 3D for plotting purposes
 pca_3d = PCA(n_components=3)
 whitened_data_3d = pca_3d.fit_transform(whitened_data)
+print(whitened_data.shape)
 
 # Create a 3D plot
 fig = plt.figure(figsize=(8, 6))
