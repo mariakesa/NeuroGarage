@@ -36,15 +36,11 @@ def plot_cells(experiment_container_id, experiment_type):
     cells = data_set_regression.get_cell_specimen_ids()
     cell2ix={cell:ix for ix, cell in enumerate(cells)}
     ix2cell={ix:cell for ix, cell in enumerate(cells)}
-    print(data_set_regression.get_dff_traces()[1].shape)
-    print(data_set_events.shape)
-    print(data_set_regression)
-    print(cells)
-    cell_indexes=range(0, len(cells))
     get_cell_trials_f(get_n_events, 0, data_set_events)
 
 
-def get_cell_trials_f(action_function, cell_index, data_set):
+def get_cell_trials_f(action_function, cell_index, events):
+    all_trials = events[cell_index]
     #timestamps, events = data_set.get_events(cell_specimen_id)
     #print(events)
     pass
