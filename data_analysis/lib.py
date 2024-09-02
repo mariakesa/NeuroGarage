@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 import numpy as np
 from sklearn.decomposition import PCA, NMF
 import matplotlib.pyplot as plt
+from sklearn.linear_model import Ridge  
+import pickle
 
 load_dotenv()
 
@@ -17,6 +19,9 @@ stimulus_session_dict = {
             'three_session_C2': ['natural_movie_one', 'natural_movie_two']
 }
 experiment_container_id=565039910
+
+stimuli=pickle.load(open('/home/maria/Documents/HuggingMouseData/TransformerEmbeddings/openai_clip-vit-base-patch32_embeddings.pkl','rb'))
+print(stimuli.keys())
 
 
 def get_n_events():
@@ -59,12 +64,19 @@ def plot_cells(experiment_container_id, experiment_type, stimulus_type):
     ix2cell={ix:cell for ix, cell in enumerate(cells)}
     stim_table=data_set_regression.get_stimulus_table(stimulus_type)
     stim_dict=create_nested_dict(stim_table)
-    ix=cell2ix[575003602]
+    #ix=cell2ix[575003602]
+    ix=4
     cell_ix=ix2cell[ix]
     timed_array=get_cell_trials_f(get_n_events, ix, data_set_events,stim_dict)
-    coninuous_array=get_cell_trials_regression(get_n_events, cell_ix, data_set_regression, stim_dict)
-    #W, H = get_cell_nmf(timed_array)
-    plot_timed_array(coninuous_array)
+    continuous_array=get_cell_trials_regression(get_n_events, cell_ix, data_set_regression, stim_dict)
+    W, H = get_cell_nmf(timed_array)
+    #plot_timed_array(continuous_array)
+    print(H[0].shape,stimuli[stimulus_type].shape)
+    regression= Ridge(alpha=4.0)
+    regression.fit(stimuli[stimulus_type],H[0])
+    #regression.fit(stimuli[stimulus_type],timed_array[0])
+    prediction=regression.predict(stimuli[stimulus_type])
+    print('Correlation:',np.corrcoef(prediction,H[0]))
 
 def plot_components(H):
         # Plot the H matrix (temporal components) in 3D
@@ -108,8 +120,10 @@ def get_cell_nmf(timed_array):
     W = model.fit_transform(timed_array)
     H = model.components_
     print(H.shape,W.shape)
-    plt.plot(H[2])
+    plt.plot(H[0])
     plt.show()
+    #regression= Ridge(alpha=4.0)
+    #
     #plot_components(H)
     return W, H
 
