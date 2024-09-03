@@ -65,17 +65,20 @@ def plot_cells(experiment_container_id, experiment_type, stimulus_type):
     stim_table=data_set_regression.get_stimulus_table(stimulus_type)
     stim_dict=create_nested_dict(stim_table)
     #ix=cell2ix[575003602]
-    ix=4
+    ix=7
     cell_ix=ix2cell[ix]
     timed_array=get_cell_trials_f(get_n_events, ix, data_set_events,stim_dict)
     continuous_array=get_cell_trials_regression(get_n_events, cell_ix, data_set_regression, stim_dict)
     W, H = get_cell_nmf(timed_array)
-    #plot_timed_array(continuous_array)
+    plot_timed_array(timed_array)
     print(H[0].shape,stimuli[stimulus_type].shape)
-    regression= Ridge(alpha=4.0)
+    regression= Ridge(alpha=10.0)
     regression.fit(stimuli[stimulus_type],H[0])
     #regression.fit(stimuli[stimulus_type],timed_array[0])
     prediction=regression.predict(stimuli[stimulus_type])
+    plt.plot(H[0], alpha=0.5)
+    plt.plot(prediction, alpha=0.5)
+    plt.show()
     print('Correlation:',np.corrcoef(prediction,H[0]))
 
 def plot_components(H):
