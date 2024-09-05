@@ -45,6 +45,39 @@ def create_nested_dict(df):
 def max_pool(all_trials,start,end):
     return max(all_trials[start:end+1])
 
+def plot_images(stim_table):
+    pass#max pooling
+
+def affinewarp(data):
+    from affinewarp import ShiftWarping, PiecewiseWarping
+
+    # Create the model. Add a roughness penalty to the model template.
+    model = ShiftWarping(maxlag=0.3, smoothness_reg_scale=10.)
+
+    #model=PiecewiseWarping(n_knots=-1, warp_reg_scale=1e-6, smoothness_reg_scale=10.0)
+
+    # NOTE : you can also use PiecewiseWarping with `n_knots` parameter set to -1.
+    #
+    #  >> model = PiecewiseWarping(n_knots=-1, smoothness_reg_scale=10.)
+
+    # Fit the model.
+    model.fit(data, iterations=20)
+
+    # Plot model learning curve.
+    plt.plot(model.loss_hist)
+    plt.xlabel('iterations')
+    plt.ylabel('model loss')
+    plt.show()
+
+
+    transformed=model.transform(data).squeeze()
+
+    plt.imshow(model.transform(data).squeeze(), aspect='auto')
+    plt.title('aligned raw data'), plt.xlabel('time (a.u.)'), plt.ylabel('trials')
+    plt.colorbar()
+    plt.show()
+    return transformed
+
 def plot_cells(experiment_container_id, experiment_type, stimulus_type):
     experiment_dict = boc.get_ophys_experiments(experiment_container_ids=[experiment_container_id])
     if experiment_type == 'three_session_C':
@@ -63,23 +96,44 @@ def plot_cells(experiment_container_id, experiment_type, stimulus_type):
     cell2ix={cell:ix for ix, cell in enumerate(cells)}
     ix2cell={ix:cell for ix, cell in enumerate(cells)}
     stim_table=data_set_regression.get_stimulus_table(stimulus_type)
+    print(stim_table)
     stim_dict=create_nested_dict(stim_table)
     #ix=cell2ix[575003602]
     ix=7
     cell_ix=ix2cell[ix]
     timed_array=get_cell_trials_f(get_n_events, ix, data_set_events,stim_dict)
     continuous_array=get_cell_trials_regression(get_n_events, cell_ix, data_set_regression, stim_dict)
+    from scipy.ndimage import gaussian_filter1d
+    timed_array = gaussian_filter1d(timed_array, sigma=30, axis=1)
+    from sklearn.preprocessing import MinMaxScaler
+    import numpy as np
+    scaler = MinMaxScaler()
+
+    # Normalize each row (trial) of the timed_array
+    normalized_array = np.zeros_like(timed_array)
+    for i in range(timed_array.shape[0]):
+        normalized_array[i, :] = scaler.fit_transform(timed_array[i, :].reshape(-1, 1)).flatten()
+    timed_array=normalized_array
+    smoothed_array = gaussian_filter1d(timed_array, sigma=30, axis=1)
+    timed_array=affinewarp(np.expand_dims(timed_array, axis=2))
+    #timed_array=continuous_array
+    print(timed_array.shape)
     W, H = get_cell_nmf(timed_array)
     plot_timed_array(timed_array)
     print(H[0].shape,stimuli[stimulus_type].shape)
     regression= Ridge(alpha=10.0)
-    regression.fit(stimuli[stimulus_type],H[0])
+    regression.fit(stimuli[stimulus_type],H[1])
     #regression.fit(stimuli[stimulus_type],timed_array[0])
     prediction=regression.predict(stimuli[stimulus_type])
-    plt.plot(H[0], alpha=0.5)
+    plt.imshow(W[:,1].reshape(-1,1)@H[1,:].reshape(1,-1),aspect='auto')
+    #plt.imshow(timed_array@timed_array.T,aspect='auto')
+    plt.show()
+    print('boom', W.shape,H.shape)
+    plt.plot(H[1], alpha=0.5)
     plt.plot(prediction, alpha=0.5)
     plt.show()
     print('Correlation:',np.corrcoef(prediction,H[0]))
+
 
 def plot_components(H):
         # Plot the H matrix (temporal components) in 3D
@@ -120,6 +174,7 @@ def plot_timed_array(timed_array):
 def get_cell_nmf(timed_array):
     # Perform non-negative matrix factorization
     model = NMF(n_components=3, init='random', random_state=0)
+    model=PCA(n_components=3)
     W = model.fit_transform(timed_array)
     H = model.components_
     print(H.shape,W.shape)
@@ -160,4 +215,5 @@ def cell_compute_n_events(experiment_id, cell_specimen_id):
 
 #natural_movie_three: 10 repeats
 plot_cells(experiment_container_id, 'three_session_A', 'natural_movie_three')
-plot_cells(experiment_container_id, 'three_session_C', 'natural_movie_one')
+#plot_cells(experiment_container_id, 'three_session_C', 'natural_movie_one')
+#plot_cells(experiment_container_id, 'three_session_B', 'natural_scenes')
