@@ -54,14 +54,14 @@ def affinewarp(data):
     # Create the model. Add a roughness penalty to the model template.
     model = ShiftWarping(maxlag=0.3, smoothness_reg_scale=10.)
 
-    #model=PiecewiseWarping(n_knots=-1, warp_reg_scale=1e-6, smoothness_reg_scale=10.0)
+    model=PiecewiseWarping(n_knots=-1, warp_reg_scale=1e-6, smoothness_reg_scale=10.0)
 
     # NOTE : you can also use PiecewiseWarping with `n_knots` parameter set to -1.
     #
     #  >> model = PiecewiseWarping(n_knots=-1, smoothness_reg_scale=10.)
 
     # Fit the model.
-    model.fit(data, iterations=20)
+    model.fit(data, iterations=200)
 
     # Plot model learning curve.
     plt.plot(model.loss_hist)
@@ -104,17 +104,20 @@ def plot_cells(experiment_container_id, experiment_type, stimulus_type):
     timed_array=get_cell_trials_f(get_n_events, ix, data_set_events,stim_dict)
     continuous_array=get_cell_trials_regression(get_n_events, cell_ix, data_set_regression, stim_dict)
     from scipy.ndimage import gaussian_filter1d
-    timed_array = gaussian_filter1d(timed_array, sigma=30, axis=1)
-    from sklearn.preprocessing import MinMaxScaler
+    timed_array = gaussian_filter1d(timed_array, sigma=50, axis=1)
+    from sklearn.preprocessing import MinMaxScaler,StandardScaler
     import numpy as np
     scaler = MinMaxScaler()
+    scaler = StandardScaler()
 
     # Normalize each row (trial) of the timed_array
     normalized_array = np.zeros_like(timed_array)
     for i in range(timed_array.shape[0]):
         normalized_array[i, :] = scaler.fit_transform(timed_array[i, :].reshape(-1, 1)).flatten()
+    print(np.mean(normalized_array,axis=1),np.std(normalized_array,axis=1))
     timed_array=normalized_array
-    smoothed_array = gaussian_filter1d(timed_array, sigma=30, axis=1)
+    np.save('timewarp.npy',timed_array[8:10,:])
+    #timed_array = gaussian_filter1d(timed_array, sigma=30, axis=1)
     timed_array=affinewarp(np.expand_dims(timed_array, axis=2))
     #timed_array=continuous_array
     print(timed_array.shape)
