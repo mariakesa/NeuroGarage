@@ -118,14 +118,15 @@ def plot_cells(experiment_container_id, experiment_type, stimulus_type):
     timed_array=normalized_array
     np.save('timewarp.npy',timed_array[8:10,:])
     #timed_array = gaussian_filter1d(timed_array, sigma=30, axis=1)
-    timed_array=affinewarp(np.expand_dims(timed_array, axis=2))
+    #timed_array=affinewarp(np.expand_dims(timed_array, axis=2))
     #timed_array=continuous_array
     print(timed_array.shape)
     W, H = get_cell_nmf(timed_array)
     plot_timed_array(timed_array)
     print(H[0].shape,stimuli[stimulus_type].shape)
     regression= Ridge(alpha=10.0)
-    regression.fit(stimuli[stimulus_type],H[1])
+    #regression.fit(stimuli[stimulus_type],H[1])
+    regression.fit(stimuli[stimulus_type],np.mean(timed_array, axis=0))
     #regression.fit(stimuli[stimulus_type],timed_array[0])
     prediction=regression.predict(stimuli[stimulus_type])
     plt.imshow(W[:,1].reshape(-1,1)@H[1,:].reshape(1,-1),aspect='auto')
@@ -135,7 +136,7 @@ def plot_cells(experiment_container_id, experiment_type, stimulus_type):
     plt.plot(H[1], alpha=0.5)
     plt.plot(prediction, alpha=0.5)
     plt.show()
-    print('Correlation:',np.corrcoef(prediction,H[0]))
+    print('Correlation:',np.corrcoef(prediction,np.mean(timed_array, axis=0)))
 
 
 def plot_components(H):
