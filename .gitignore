@@ -162,3 +162,7 @@ cython_debug/
 #.idea/
 
 HuggingMouse/
+
+HuggingMouse_local/
+hypothalamus/001182
+affinewarp/
