@@ -27,3 +27,5 @@ if nn.shape[1] >= 3:
     plt.show()
 else:
     print("The embedding nn has fewer than 3 dimensions. Cannot plot in 3D.")
+
+    

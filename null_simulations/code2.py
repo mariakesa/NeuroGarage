@@ -138,4 +138,4 @@ def pipeline():
     plt.imshow(spikes.T, aspect='auto')
     plt.show()
 
-pipeline()
+#pipeline()
