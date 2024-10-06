@@ -81,25 +81,30 @@ def compute_lnp_neural_activity(embeddings, neuron_weights, biases):
 
     # Nonlinear stage: Apply exponential non-linearity to get firing rates
     rates = np.exp(linear_response)
-
+    print(rates)
     # Poisson spiking stage: Simulate spikes based on Poisson distribution
     spikes = np.random.poisson(rates)
 
     return spikes, rates
 
 def pipeline():
+    # Assuming dat is defined somewhere
     embeddings = dat['natural_movie_one']
-    embeddings_norm = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
-    embedding_dim=768
-    num_neurons=500
-    #Generate random weight vectors for neurons (selectivity directions)
+    embeddings_norm = embeddings #/ np.linalg.norm(embeddings, axis=1, keepdims=True)
+    embedding_dim = 768
+    num_neurons = 500
+    
+    # Generate random weight vectors for neurons (selectivity directions)
     neuron_weights = np.random.randn(num_neurons, embedding_dim)
     # Normalize the neuron weights to have unit length
     neuron_weights_norm = neuron_weights / np.linalg.norm(neuron_weights, axis=1, keepdims=True)
 
     # Define the bias term for each neuron (can be zeros or random)
     biases = np.zeros(num_neurons)
-    spikes, rates=compute_lnp_neural_activity(embeddings_norm, neuron_weights, biases)
+
+    # Compute spikes and rates
+    spikes, rates = compute_lnp_neural_activity(embeddings_norm, neuron_weights_norm, biases)
+    print(rates)
     DEVICE='cuda' if torch.cuda.is_available() else 'cpu'
     train_steps = 10000
     #ca_loader = cebra.data.ContinuousDataLoader(spikes, num_steps = train_steps, batch_size = 512, conditional = 'time_delta', time_offset =1)

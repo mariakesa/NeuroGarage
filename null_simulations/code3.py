@@ -8,7 +8,7 @@ import pickle
 # Original pipeline function to generate spikes
 def pipeline():
     # Assuming dat is defined somewhere
-    embeddings = dat['natural_movie_one']
+    embeddings = dat['natural_movie_two']
     embeddings_norm = embeddings #/ np.linalg.norm(embeddings, axis=1, keepdims=True)
     embedding_dim = 768
     num_neurons = 500
