@@ -60,7 +60,7 @@ embeddings_tensor = torch.tensor(embeddings, dtype=torch.float32)
 real_spikes_tensor = torch.tensor(real_spikes, dtype=torch.float32)  # Example: Fitting to the first neuron
 
 # Training loop
-num_epochs = 100
+num_epochs = 10000
 for epoch in range(num_epochs):
     lnp_model.train()
     
@@ -78,3 +78,13 @@ for epoch in range(num_epochs):
     # Print loss
     if (epoch+1) % 10 == 0:
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+
+import matplotlib.pyplot as plt
+plt.plot(predicted_firing_rate.detach().numpy(), color='blue',alpha=0.3)
+plt.plot(real_spikes_tensor.detach().numpy(), color='red',alpha=0.3)
+plt.show()
+
+plt.scatter(predicted_firing_rate.detach().numpy(),real_spikes_tensor.detach().numpy())
+plt.show()
+
+print(np.corrcoef(predicted_firing_rate.detach().numpy(),real_spikes_tensor.detach().numpy())[0,1])
