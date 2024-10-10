@@ -1,4 +1,9 @@
 import numpy as np
+from allensdk.brain_observatory.ecephys.ecephys_project_cache import EcephysProjectCache
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def get_spike_intervals(spike_times, start_times, stop_times):
     spikes_in_intervals = {}
@@ -20,3 +25,15 @@ def get_spike_intervals(spike_times, start_times, stop_times):
         spikes_in_intervals[neuron_id] = stop_indices - start_indices
     
     return spikes_in_intervals
+
+class FrontierPipeline:
+    def __init__(self, session_id=831882777):
+        output_dir=os.environ['ALLEN_NEUROPIXELS_PATH']
+        manifest_path = os.path.join(output_dir, "manifest.json")
+        self.cache = EcephysProjectCache.from_warehouse(manifest=manifest_path)
+        self.session= self.cache.get_session_data(session_id)
+        self.stimuli_df=self.session.stimulus_presentations
+
+    def __call__(self, neuron_id, stimulus_type='natural_movie_one_more_repeats'):
+        stim = self.stimuli_df[self.stimuli_df['stimulus_name'] == stimulus_type]
+        
