@@ -88,3 +88,12 @@ plt.scatter(predicted_firing_rate.detach().numpy(),real_spikes_tensor.detach().n
 plt.show()
 
 print(np.corrcoef(predicted_firing_rate.detach().numpy(),real_spikes_tensor.detach().numpy())[0,1])
+
+from scipy.ndimage import gaussian_filter1d
+
+sigma = 0.5
+filtered_spikes = gaussian_filter1d(real_spikes_tensor.detach().numpy(), sigma)
+plt.plot(predicted_firing_rate.detach().numpy()[:450], color='blue',alpha=0.3)
+plt.plot(filtered_spikes[:450], color='red',alpha=0.3)
+plt.show()
+print(np.corrcoef(predicted_firing_rate.detach().numpy(),filtered_spikes)[0,1])
