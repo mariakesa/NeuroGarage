@@ -28,16 +28,16 @@ functional_conn_session=[831882777]
 brain_obs_session=[757970808]
 
 cache = EcephysProjectCache.from_warehouse(manifest=manifest_path)
-func_session = cache.get_session_data(functional_conn_session[0])
+func_session = cache.get_session_data(brain_obs_session[0])
 
 stimuli_df=func_session.stimulus_presentations
 print(stimuli_df) 
 print(stimuli_df.columns)
 
 # Filter for the first stimulus of interest
-df_one_more_repeats = stimuli_df[stimuli_df['stimulus_name'] == 'natural_movie_one_shuffled']
+df_one_more_repeats = stimuli_df[stimuli_df['stimulus_name'] == 'natural_scenes']
 
-embeddings=pickle.load(open('/home/maria/Documents/HuggingMouseData/TransformerEmbeddings/google_vit-base-patch16-224-in21k_embeddings.pkl','rb'))['natural_movie_one']
+embeddings=pickle.load(open('/home/maria/Documents/HuggingMouseData/TransformerEmbeddings/google_vit-base-patch16-224-in21k_embeddings.pkl','rb'))['natural_scenes']
 spike_times=func_session.spike_times
 
 start_times = df_one_more_repeats['start_time'].values
@@ -47,7 +47,7 @@ stop_times = df_one_more_repeats['stop_time'].values
 
 real_spikes=get_spike_intervals(spike_times,start_times,stop_times)
 print(real_spikes)
-real_spikes=real_spikes[951084160][:900]
+real_spikes=real_spikes[951840133][:118]
 
 # Assuming embeddings is a (num_samples, embedding_dim) tensor and real_spikes is (num_samples, num_neurons)
 input_dim = embeddings.shape[1]
