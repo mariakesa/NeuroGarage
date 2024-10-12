@@ -39,6 +39,8 @@ df_one_more_repeats = stimuli_df[stimuli_df['stimulus_name'] == 'natural_scenes'
 
 embeddings=pickle.load(open('/home/maria/Documents/HuggingMouseData/TransformerEmbeddings/google_vit-base-patch16-224-in21k_embeddings.pkl','rb'))['natural_scenes']
 spike_times=func_session.spike_times
+print(len(spike_times.keys()))
+'''
 
 start_times = df_one_more_repeats['start_time'].values
 print(len(start_times))
@@ -98,4 +100,4 @@ filtered_spikes = gaussian_filter1d(real_spikes_tensor.detach().numpy(), sigma)
 plt.plot(predicted_firing_rate.detach().numpy()[:450], color='blue',alpha=0.3)
 plt.plot(filtered_spikes[:450], color='red',alpha=0.3)
 plt.show()
-print(np.corrcoef(predicted_firing_rate.detach().numpy(),filtered_spikes)[0,1])
+print(np.corrcoef(predicted_firing_rate.detach().numpy(),filtered_spikes)[0,1])'''
