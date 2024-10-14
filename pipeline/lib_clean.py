@@ -6,8 +6,42 @@ from torch import nn
 import torch
 import pickle
 import torch.optim as optim
+from torch.autograd import grad
+from sklearn.model_selection import KFold
+from torch.utils.data import DataLoader
 
 load_dotenv()
+
+class Loader(DataLoader):
+    def __init__(self, session_id, stimulus, shuffled=False, single_trial_limit=True, fold_index=None):
+        self.shuffled = shuffled
+        self.single_trial_limit = single_trial_limit
+        self.fold_index = fold_index 
+        output_dir=os.environ['ALLEN_NEUROPIXELS_PATH']
+        manifest_path = os.path.join(output_dir, "manifest.json")
+        self.cache = EcephysProjectCache.from_warehouse(manifest=manifest_path)
+        self.session= self.cache.get_session_data(session_id)
+        self.stimulus=stimulus
+        self.stimuli_df=self.session.stimulus_presentations
+        if stimulus=='natural_scenes':
+            self.n_splits=4
+        train_index, test_index = self.make_splits()
+
+    def make_splits(self):
+        kf = KFold(n_splits=self.n_splits, shuffle=self.shuffled)
+        if self.stimulus=='natural_scenes':
+            n_data_points=118
+        for i, (train_index, test_index) in enumerate(kf.split(np.arange(n_data_points))):
+            if i==self.fold_index:
+                return train_index, test_index
+
+    
+    def __len__(self):
+        if self.stimulus=='natural_scenes':
+            return 4
+    
+    def __getitem__(self, idx):
+        return self.dataset[idx]
 
 def get_spike_intervals(spike_times, start_times, stop_times):
     spikes_in_intervals = {}
@@ -29,6 +63,29 @@ def get_spike_intervals(spike_times, start_times, stop_times):
         spikes_in_intervals[neuron_id] = stop_indices - start_indices
     
     return spikes_in_intervals
+
+
+def train_test_split_interleaved(self, movie_stim_table, dff_traces, trial, embedding, test_set_size):
+    '''
+    From https://github.com/MouseLand/rastermap/blob/main/notebooks/tutorial.ipynb
+    '''
+    stimuli = movie_stim_table.loc[movie_stim_table['repeat'] == trial]
+    n_time = stimuli.shape[0]
+    n_segs = 20
+    n_len = n_time / n_segs
+    sinds = np.linspace(0, n_time - n_len, n_segs).astype(int)
+    itest = (sinds[:, np.newaxis] +
+                np.arange(0, n_len * test_set_size, 1, int)).flatten()
+    itrain = np.ones(n_time, "bool")
+    itrain[itest] = 0
+    itest = ~itrain
+    train_inds = stimuli['start'].values[itrain]
+    test_inds = stimuli['start'].values[itest]
+    y_train = dff_traces[:, train_inds]
+    y_test = dff_traces[:, test_inds]
+    X_train = embedding[itrain]
+    X_test = embedding[itest]
+    return {'y_train': y_train, 'y_test': y_test, 'X_train': X_train, 'X_test': X_test}
 
 # Sample LNP Model definition
 class LNPModel(nn.Module):
@@ -90,6 +147,21 @@ class FrontierPipeline:
         print(self.embeddings.shape)   
         print(lnp(self.embeddings).shape)
         self.training_loop(lnp,spikes,trial_index)
+
+
+def compute_fisher_information(model, data_loader):
+    model.eval()
+    fisher_info = None
+    for x, y in data_loader:
+        x = x.requires_grad_(True)
+        firing_rate = model(x)
+        log_likelihood = torch.sum(y * torch.log(firing_rate) - firing_rate - torch.lgamma(y + 1))
+        grads = torch.autograd.grad(log_likelihood, model.parameters(), create_graph=True)
+        grads = torch.cat([g.view(-1) for g in grads])
+        fisher_info += torch.ger(grads, grads)
+    fisher_info /= len(data_loader)
+    return fisher_info.inverse()
+
 
 pipeline=FrontierPipeline()
 for i in range(60):
