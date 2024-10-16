@@ -91,10 +91,12 @@ def train_test_split_interleaved(self, movie_stim_table, dff_traces, trial, embe
 class LNPModel(nn.Module):
     def __init__(self, input_dim, n_neurons):
         super(LNPModel, self).__init__()
-        self.linear = nn.Linear(input_dim, n_neurons)  # Linear layer for each neuron
+        self.linear = nn.Linear(input_dim, 50)  # Linear layer for each neuron
+        self.linear2=nn.Linear(50, n_neurons)
     
     def forward(self, x):
         x = self.linear(x)
+        x=self.linear2(x)
         firing_rate = torch.exp(x)  # Exponential non-linearity
         return firing_rate
 
@@ -105,14 +107,14 @@ class FrontierPipeline:
         self.cache = EcephysProjectCache.from_warehouse(manifest=manifest_path)
         self.session= self.cache.get_session_data(session_id)
         self.stimuli_df=self.session.stimulus_presentations
-        embeddings=pickle.load(open('/home/maria/Documents/HuggingMouseData/TransformerEmbeddings/google_vit-base-patch16-224-in21k_embeddings.pkl','rb'))['natural_movie_one']
+        embeddings=pickle.load(open('/home/maria/Documents/HuggingMouseData/TransformerEmbeddings/openai_clip-vit-base-patch32_embeddings.pkl','rb'))['natural_movie_one']
         self.embeddings=torch.tensor(embeddings, dtype=torch.float32)
 
     def training_loop(self, lnp_model, real_spikes_tensor, trial_index):
         # Training loop
         # Loss function (Negative Log-Likelihood) and Optimizer
         criterion = nn.PoissonNLLLoss(log_input=False)  # Poisson Negative Log-Likelihood Loss
-        optimizer = optim.Adam(lnp_model.parameters(), lr=0.01)
+        optimizer = optim.Adam(lnp_model.parameters(), lr=0.001, weight_decay=1e-4)
         num_epochs = 10000
         for epoch in range(num_epochs):
             lnp_model.train()
@@ -133,9 +135,9 @@ class FrontierPipeline:
                 print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
 
         print('Training finished')
-        print(lnp_model.linear.weight.shape)
-        weights=lnp_model.linear.weight.detach().numpy()
-        np.save(f'./weights_to_analyze/weights_{trial_index}.npy',weights)  
+        #print(lnp_model.linear.weight.shape)
+        weights=lnp_model.linear2.weight.detach().numpy()
+        np.save(f'./weights_to_analyze4/weights_{trial_index}.npy',weights)  
 
     def __call__(self, trial_index, stimulus_type='natural_movie_one_more_repeats'):
         stim = self.stimuli_df[self.stimuli_df['stimulus_name'] == stimulus_type]
