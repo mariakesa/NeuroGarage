@@ -56,16 +56,18 @@ def rastermap_pipeline(stimulus_type='natural_movie_one_more_repeats', session_i
     stim, spike_times = get_context(stimulus_type, session)
     n_trials=stimulus_repeats_dict[stimulus_type]
     #n_trials=1
-    n_trials=2
+    n_trials=10
     all_zero_neuron_dct={}
     spikes_dct={}
     for trial in range(n_trials):
         spikes, all_zero_neurons=get_spikes(spike_times, stim, trial, stimulus_type)
         all_zero_neuron_dct[trial]=all_zero_neurons
         spikes_dct[trial]=spikes.astype("float32")
+    scores=[]
     for trial_1 in range(n_trials):
         for trial_2 in range(n_trials):
             if trial_1<trial_2:
+                print(trial_1, trial_2)
                 neurons_to_exclude=list(set(all_zero_neuron_dct[trial_1]).union(set(all_zero_neuron_dct[trial_2])))
                 exclude_mask = np.isin(np.arange(spikes_dct[trial_1].shape[0]), neurons_to_exclude)
 
@@ -87,14 +89,16 @@ def rastermap_pipeline(stimulus_type='natural_movie_one_more_repeats', session_i
                   locality=0.9, time_lag_window=50).fit(trial2_spks)
                 isort2 = model2.isort
 
-                print(alignment_algorithm(isort1, isort2))
+                #print(alignment_algorithm(isort1, isort2))
+                score=alignment_algorithm(isort1, isort2)
+                scores.append(score)
+                print(score)
+    print(scores)
+    np.save('scores.npy', scores)
 
-                np.save('isort1.npy', isort1)
-                np.save('isort2.npy', isort2)   
 
 
-
-def alignment_algorithm(seq1, seq2, window_len=4):
+def alignment_algorithm_iou(seq1, seq2, window_len=4):
     def hash_windows(seq, window_len):
         dct = {tuple(sorted(seq[i:i+window_len])): i for i in range(len(seq) - window_len + 1)}
         return dct
@@ -110,10 +114,13 @@ def alignment_algorithm(seq1, seq2, window_len=4):
             N_matches+=1
 
     return N_matches/N_windows
+
+
+
                 
                 
     
 
-#rastermap_pipeline()
+rastermap_pipeline()
 
     
