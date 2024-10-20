@@ -2,6 +2,8 @@ import os
 from allensdk.brain_observatory.ecephys.ecephys_project_cache import EcephysProjectCache
 from dotenv import load_dotenv
 import numpy as np
+from rastermap import Rastermap
+from scipy.ndimage import gaussian_filter1d
 
 load_dotenv()
 
@@ -54,20 +56,64 @@ def rastermap_pipeline(stimulus_type='natural_movie_one_more_repeats', session_i
     stim, spike_times = get_context(stimulus_type, session)
     n_trials=stimulus_repeats_dict[stimulus_type]
     #n_trials=1
-    n_trials=5
+    n_trials=2
     all_zero_neuron_dct={}
     spikes_dct={}
     for trial in range(n_trials):
         spikes, all_zero_neurons=get_spikes(spike_times, stim, trial, stimulus_type)
         all_zero_neuron_dct[trial]=all_zero_neurons
-        spikes_dct[trial]=spikes
+        spikes_dct[trial]=spikes.astype("float32")
     for trial_1 in range(n_trials):
         for trial_2 in range(n_trials):
-            if trial_1!=trial_2:
+            if trial_1<trial_2:
                 neurons_to_exclude=list(set(all_zero_neuron_dct[trial_1]).union(set(all_zero_neuron_dct[trial_2])))
+                exclude_mask = np.isin(np.arange(spikes_dct[trial_1].shape[0]), neurons_to_exclude)
+
+                # Apply the same exclusion mask to both trials
+                trial1_spks = spikes_dct[trial_1][~exclude_mask]
+                trial2_spks = spikes_dct[trial_2][~exclude_mask]
+                
+                sigma = 10.0 
+
+                # Apply Gaussian smoothing along the time axis (axis=1) for each neuron.
+                trial1_spks = gaussian_filter1d(trial1_spks, sigma=sigma, axis=1)
+                trial2_spks = gaussian_filter1d(trial2_spks, sigma=sigma, axis=1)
+
+                model1 = Rastermap(n_PCs=200, n_clusters=50, 
+                  locality=0.9, time_lag_window=50).fit(trial1_spks)
+                isort1 = model1.isort
+
+                model2 = Rastermap(n_PCs=200, n_clusters=50, 
+                  locality=0.9, time_lag_window=50).fit(trial2_spks)
+                isort2 = model2.isort
+
+                print(alignment_algorithm(isort1, isort2))
+
+                np.save('isort1.npy', isort1)
+                np.save('isort2.npy', isort2)   
+
+
+
+def alignment_algorithm(seq1, seq2, window_len=4):
+    def hash_windows(seq, window_len):
+        dct = {tuple(sorted(seq[i:i+window_len])): i for i in range(len(seq) - window_len + 1)}
+        return dct
+    seq1_hashes = hash_windows(seq1, window_len)
+
+    N_matches=0
+    N_windows=0
+    for i in range(len(seq2) - window_len + 1):
+        N_windows+=1
+        window = seq2[i:i+window_len]
+        if tuple(sorted(window)) in seq1_hashes:
+            print('boom')
+            N_matches+=1
+
+    return N_matches/N_windows
                 
                 
     
 
-rastermap_pipeline()
+#rastermap_pipeline()
+
     
