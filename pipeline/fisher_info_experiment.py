@@ -88,17 +88,26 @@ class FrontierPipeline:
         
 
     def __call__(self, trial_index, stimulus_type='natural_movie_one_more_repeats'):
+        stimulus_type='natural_movie_one_shuffled'
         stim = self.stimuli_df[self.stimuli_df['stimulus_name'] == stimulus_type]
         spike_times=self.session.spike_times
         spike_times=get_spike_intervals(spike_times,stim['start_time'].values,stim['stop_time'].values)
         spikes=torch.tensor([spike_times[key] for key in spike_times.keys()],dtype=torch.float32)[:,trial_index*900:(trial_index+1)*900].T
+        '''
         lnp=LNPModel(self.embeddings.shape[1], len(spike_times.keys()))
         model=self.training_loop(lnp,spikes,trial_index)
         firing_rates, embeddings=model(self.embeddings)
         print(firing_rates.shape, embeddings.shape)
         np.save(f'./fisher_weights/firing_rates_{trial_index}.npy', firing_rates.detach().numpy(), f'./fisher_weights/firing_rates_{trial_index}.npy')
         np.save(f'./fisher_weights/embeddings_{trial_index}.npy', embeddings.detach().numpy())
+        np.save(f'./fisher_weights/spikes_{trial_index}.npy', spikes.detach().numpy())
+        '''
+        #np.save(f'./fisher_weights/shuffled_firing_rates_{trial_index}.npy', firing_rates.detach().numpy(), f'./fisher_weights/firing_rates_{trial_index}.npy')
+        #np.save(f'./fisher_weights/shuffled_embeddings_{trial_index}.npy', embeddings.detach().numpy())
+        np.save(f'./fisher_weights/shuffled_spikes_{trial_index}.npy', spikes.detach().numpy())
+
 
 
 pipeline=FrontierPipeline()
-pipeline(0)
+for i in range(0,10):
+    pipeline(i)

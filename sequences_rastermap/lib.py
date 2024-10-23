@@ -81,34 +81,33 @@ def rastermap_pipeline(stimulus_type='natural_movie_one_more_repeats', session_i
                 trial1_spks = gaussian_filter1d(trial1_spks, sigma=sigma, axis=1)
                 trial2_spks = gaussian_filter1d(trial2_spks, sigma=sigma, axis=1)
 
-                model1 = Rastermap(n_PCs=200, n_clusters=50, 
+                model1 = Rastermap(n_PCs=200, n_clusters=100, 
                   locality=0.9, time_lag_window=50).fit(trial1_spks)
                 isort1 = model1.isort
 
-                model2 = Rastermap(n_PCs=200, n_clusters=50, 
+                model2 = Rastermap(n_PCs=200, n_clusters=100, 
                   locality=0.9, time_lag_window=50).fit(trial2_spks)
                 isort2 = model2.isort
 
                 #print(alignment_algorithm(isort1, isort2))
-                score=alignment_algorithm(isort1, isort2)
+                score=alignment_algorithm_iou(isort1, isort2)
                 scores.append(score)
                 print(score)
     print(scores)
     np.save('scores.npy', scores)
 
-
-
-def alignment_algorithm_iou(seq1, seq2, window_len=4):
+def alignment_algorithm(seq1, seq2, window_len=400):
     def hash_windows(seq, window_len):
         dct = {tuple(sorted(seq[i:i+window_len])): i for i in range(len(seq) - window_len + 1)}
         return dct
     seq1_hashes = hash_windows(seq1, window_len)
-
+    print(seq1_hashes)
     N_matches=0
     N_windows=0
     for i in range(len(seq2) - window_len + 1):
         N_windows+=1
-        window = seq2[i:i+window_len]
+        window = sorted(seq2[i:i+window_len])
+        print(window)
         if tuple(sorted(window)) in seq1_hashes:
             print('boom')
             N_matches+=1
@@ -116,9 +115,32 @@ def alignment_algorithm_iou(seq1, seq2, window_len=4):
     return N_matches/N_windows
 
 
-
-                
-                
+def alignment_algorithm_iou(seq1, seq2, window_len=10):
+    def intersection_over_union(window1, window2):
+        intersection = len(set(window1) & set(window2))
+        union = len(set(window1) | set(window2))
+        return intersection / union
+    
+    def create_seq_windows(seq, window_len):
+        # Create sliding windows of size window_len
+        return [seq[i:i+window_len] for i in range(len(seq) - window_len + 1)]
+    
+    # Generate sliding windows for seq1
+    seq1_windows = create_seq_windows(seq1, window_len)
+    
+    # For each window in seq2, compute the max IoU with any window in seq1
+    max_list = []
+    for s2_start in range(len(seq2) - window_len + 1):
+        window2 = seq2[s2_start:s2_start + window_len]
+        
+        # Compute IoU for each window in seq1 with the current window in seq2
+        iou_values = [intersection_over_union(window1, window2) for window1 in seq1_windows]
+        
+        # Append the max IoU for the current window in seq2
+        max_list.append(max(iou_values))
+    
+    # Return the mean of the maximum IoU values
+    return np.mean(max_list)
     
 
 rastermap_pipeline()

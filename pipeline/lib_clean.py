@@ -165,8 +165,49 @@ def compute_fisher_information(model, data_loader):
     return fisher_info.inverse()
 
 
-pipeline=FrontierPipeline()
-for i in range(60):
-    pipeline(i)
+#pipeline=FrontierPipeline()
+#for i in range(60):
+    #pipeline(i)
+
+import numpy as np
+import matplotlib.pyplot as plt
+from rastermap import Rastermap
+from scipy.ndimage import gaussian_filter1d
+
+
+def rastermap_plot(i):
+    # spks is neurons by time
+    spks = np.load(f"/home/maria/NeuroGarage/pipeline/fisher_weights/shuffled_spikes_{i}.npy").T.astype("float32")
+    print(spks.shape)
+
+    # Create a boolean mask where True indicates rows that are not all zeros
+    non_zero_mask = ~(spks == 0).all(axis=1)
+
+    # Apply the mask to filter out rows where all elements are zero
+    spks_filtered = spks[non_zero_mask]
+    sigma = 10.0  # You can experiment with different values, e.g., 1.0, 2.0, etc.
+
+    # Apply Gaussian smoothing along the time axis (axis=1) for each neuron.
+    spks_smoothed = gaussian_filter1d(spks_filtered, sigma=sigma, axis=1)
+
+    # fit rastermap
+    model = Rastermap(n_PCs=200, n_clusters=50, 
+                    locality=0.5, time_lag_window=50).fit(spks_smoothed)
+    y = model.embedding # neurons x 1
+    print(y)
+    isort = model.isort
+    print(isort)
+
+    # visualize binning over neurons
+    X_embedding = model.X_embedding
+    print(X_embedding)
+
+    # plot
+    fig = plt.figure(figsize=(12,5))
+    ax = fig.add_subplot(111)
+    ax.imshow(spks_smoothed[y], vmin=0, vmax=1.5, cmap="gray_r", aspect="auto")
+    plt.show()
+
+rastermap_plot(0)
 
         
