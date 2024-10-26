@@ -85,7 +85,8 @@ class FrontierPipeline:
                 print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
 
         print('Training finished')
-        return lnp_model
+        weights=lnp_model.linear2.weight.detach().numpy()
+        return lnp_model, weights
     
     def __call__(self, trial_index, stimulus_type='natural_movie_one_more_repeats'):
         stim = self.stimuli_df[self.stimuli_df['stimulus_name'] == stimulus_type]
@@ -93,7 +94,12 @@ class FrontierPipeline:
         spike_times=get_spike_intervals(spike_times,stim['start_time'].values,stim['stop_time'].values)
         spikes=torch.tensor([spike_times[key] for key in spike_times.keys()],dtype=torch.float32)[:,trial_index*900:(trial_index+1)*900].T
         lnp=LNPModel(self.embeddings.shape[1], len(spike_times.keys()))
-        lnp_model=self.training_loop(lnp,spikes,trial_index)
+        lnp_model, weights=self.training_loop(lnp,spikes,trial_index)
+
+        def calculate_Fisher_matrix(neuron_index):
+            firing_rate=lnp_model(self.embeddings).squeeze()[neuron_index]
+
+
 
 pipeline=FrontierPipeline()
 for i in range(1):
