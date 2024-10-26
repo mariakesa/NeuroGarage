@@ -5,6 +5,7 @@ __pycache__/
 *.npy
 *.h5
 
+/crcns-student/
 # C extensions
 *.so
 
