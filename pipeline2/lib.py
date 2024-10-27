@@ -44,10 +44,10 @@ class LNPModel(nn.Module):
         self.linear2=nn.Linear(10, n_neurons)
     
     def forward(self, x):
-        x = self.linear(x)
-        x=self.linear2(x)
+        x_0 = self.linear(x)
+        x=self.linear2(x_0)
         firing_rate = torch.exp(x)  # Exponential non-linearity
-        return firing_rate
+        return firing_rate, x_0
 
 class FrontierPipeline:
     def __init__(self, session_id=831882777):
@@ -70,8 +70,8 @@ class FrontierPipeline:
             lnp_model.train()
             
             # Forward pass
-            predicted_firing_rate = lnp_model(self.embeddings).squeeze()*delta
-            
+            predicted_firing_rate, _ = lnp_model(self.embeddings)
+            predicted_firing_rate=predicted_firing_rate.squeeze()*delta
             # Compute loss
             loss = criterion(predicted_firing_rate, real_spikes_tensor)
             
@@ -96,11 +96,69 @@ class FrontierPipeline:
         lnp=LNPModel(self.embeddings.shape[1], len(spike_times.keys()))
         lnp_model, weights=self.training_loop(lnp,spikes,trial_index)
 
-        def calculate_Fisher_matrix(neuron_index):
-            firing_rate=lnp_model(self.embeddings).squeeze()[neuron_index]
+        return lnp_model, weights, self.embeddings
+
+def FisherInformation(lnp_model, embeddings, neuron_index=0, delta=0.0333):
+    """
+    Calculate the Fisher Information Matrix using vectorized operations.
+
+    Parameters:
+    - lnp_model: The Linear Nonlinear Poisson model.
+    - embeddings: The input embeddings (torch tensor).
+    - neuron_index: Index of the neuron to calculate Fisher information for.
+    - delta: Scaling factor (e.g., time window).
+
+    Returns:
+    - fisher_matrix: The Fisher Information Matrix (numpy array).
+    """
+    # Compute firing rates using the LNP model
+    firing_rate, embeddings = lnp_model(embeddings)  # Shape: (n_observations, n_neurons)
+    print("Firing rate shape:", firing_rate.shape)
+    
+    # Select the neuron of interest
+    take_neuron = firing_rate[:, neuron_index].detach().numpy()
+    print(f"take_neuron_{neuron_index} shape:", take_neuron.shape)
+    print(f"take_neuron_{neuron_index} stats: min =", take_neuron.min(), 
+          "max =", take_neuron.max(), "mean =", take_neuron.mean())
+    
+    
+    # Ensure firing rates are positive
+    if np.any(take_neuron < 0):
+        raise ValueError(f"Firing rates for neuron {neuron_index} contain negative values.")
+    
+    # Apply scaling if necessary
+    scaled_firing_rate = take_neuron * delta
+    print("Scaled firing rate stats: min =", scaled_firing_rate.min(), 
+          "max =", scaled_firing_rate.max(), "mean =", scaled_firing_rate.mean())
+    
+    # Ensure scaled_firing_rate remains positive
+    if np.any(scaled_firing_rate < 0):
+        raise ValueError("Negative scaled firing rates detected after applying delta.")
+    
+    # Convert embeddings to NumPy array
+    X = embeddings.detach().numpy()  # Shape: (n_observations, n_features)
+    
+    # Compute scaled embeddings
+    scaled_X = X * scaled_firing_rate[:, np.newaxis]  # Shape: (n_observations, n_features)
+    
+    # Compute Fisher information matrix
+    fisher_matrix = scaled_X.T @ X  # Shape: (n_features, n_features)
+    
+    print("Fisher information matrix shape:", fisher_matrix.shape)
+    print("Fisher information matrix stats: min =", fisher_matrix.min(), 
+          "max =", fisher_matrix.max(), "mean =", fisher_matrix.mean())
+    
+    # Check if Fisher matrix is positive semi-definite
+    eigenvalues = np.linalg.eigvalsh(fisher_matrix)
+    if np.any(eigenvalues < -1e-8):  # Allowing for small numerical errors
+        print("Warning: Fisher information matrix has negative eigenvalues.")
+    else:
+        print("Fisher information matrix is positive semi-definite.")
+    
+    return fisher_matrix
 
 
 
-pipeline=FrontierPipeline()
-for i in range(1):
-    pipeline(i)
+#pipeline=FrontierPipeline()
+#for i in range(1):
+    #pipeline(i)
