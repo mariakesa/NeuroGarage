@@ -67,5 +67,6 @@ start=time.time()
 spikes_per_interval_optimized = get_spikes_in_intervals_optimized(spike_times, start_times, stop_times)
 end=time.time()
 print('Time taken: ', end-start)
-
 print(spikes_per_interval_optimized)
+print(spikes_per_interval_optimized[951109619].shape)
+print(len(spikes_per_interval_optimized.keys()))

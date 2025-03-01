@@ -56,6 +56,7 @@ stims_reconstructed = pca.inverse_transform(stims_transformed)  # Shape: (2800, 
 print(f"PCA components shape: {pca.components_.shape}")     # Expected: (100, height*selected_width)
 print(stims_reconstructed.shape)  # Expected: (2800, height*selected_width)
 ims=stims_reconstructed[sequences]
+ims=stims_reshaped[sequences]
 plt.imshow(stims_reconstructed[0].reshape(stims.shape[0], stims.shape[1]), cmap='gray')
 plt.show()
 # Fit Ridge Regression
